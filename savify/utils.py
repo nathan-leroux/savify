@@ -4,10 +4,17 @@ from pathlib import Path
 from shutil import rmtree
 from sys import platform
 from uuid import uuid1
-from urllib.request import urlretrieve
+import requests
 import re
 
-__all__ = ['PathHolder']
+__all__ = ['PathHolder', 'urlretrieve']
+
+
+def urlretrieve(url, file):
+    response = requests.get(url, stream=True)
+    with open(file, 'wb') as fd:
+        for chunk in response.iter_content(chunk_size=8192):
+            fd.write(chunk)
 
 
 def clean(path) -> None:
