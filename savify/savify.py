@@ -3,7 +3,7 @@
 __all__ = ['Savify']
 
 import time
-from multiprocessing import cpu_count
+from multiprocessing import cpu_count, freeze_support
 from multiprocessing.dummy import Pool as ThreadPool
 from pathlib import Path
 from shutil import move, Error as ShutilError
@@ -80,7 +80,7 @@ class Savify:
         self.check_for_updates()
 
     def check_for_updates(self) -> None:
-        self.logger.info('Checking for updates...')
+        print('Checking for updates...')
         latest_ver = requests.get('https://api.github.com/repos/LaurenceRawlings/savify/releases/latest').json()[
             'tag_name']
 
@@ -88,9 +88,9 @@ class Savify:
         current_ver = f'v{__version__}'
 
         if latest_ver == current_ver:
-            self.logger.info('Savify is up to date!')
+            print('Savify is up to date!')
         else:
-            self.logger.info('A new version of Savify is available, '
+            print('A new version of Savify is available, '
                              'get the latest release here: https://github.com/LaurenceRawlings/savify/releases')
 
     def _parse_query(self, query, query_type=Type.TRACK, artist_albums: bool = False) -> list:
@@ -124,11 +124,12 @@ class Savify:
             raise InternetConnectionError
 
         if not (len(queue) > 0):
-            self.logger.info('Nothing found using the given query.')
+            print('Nothing found using the given query.')
             return
 
-        self.logger.info(f'Downloading {len(queue)} songs...')
+        print(f'Downloading {len(queue)} songs...')
         start_time = time.time()
+        freeze_support()
         with ThreadPool(cpu_count()) as pool:
             jobs = pool.map(self._download, queue)
 
@@ -162,11 +163,11 @@ class Savify:
                 from os.path import relpath
                 m3u += f'{relpath(location, m3u_location.parent)}\n'
 
-            self.logger.info('Creating the M3U playlist file..')
+            print('Creating the M3U playlist file..')
             with open(m3u_location, 'w') as m3u_file:
                 m3u_file.write(m3u)
 
-        self.logger.info('Cleaning up...')
+        print('Cleaning up...')
         clean(self.path_holder.get_temp_dir())
 
         message = f'Download Finished!\n\tCompleted {len(queue) - len(failed_jobs)}/{len(queue)}' \
@@ -178,7 +179,7 @@ class Savify:
                 message += f'\n\tSong:\t{str(failed_job["track"])}' \
                            f'\n\tReason:\t{failed_job["error"]}\n'
 
-        self.logger.info(message)
+        print(message)
         self.queue_size -= len(queue)
         self.completed -= len(queue)
 
@@ -201,7 +202,7 @@ class Savify:
         }
 
         if check_file(output):
-            self.logger.info(f'{str(track)} -> is already downloaded. Skipping...')
+            print(f'{str(track)} -> is already downloaded. Skipping...')
             status['returncode'] = 0
             self.completed += 1
             return status
@@ -278,7 +279,7 @@ class Savify:
 
             status['returncode'] = 0
             self.completed += 1
-            self.logger.info(f'Downloaded {self.completed} / {self.queue_size} -> {str(track)}')
+            print(f'Downloaded {self.completed} / {self.queue_size} -> {str(track)}')
             return status
 
         attempt = 0
@@ -331,5 +332,5 @@ class Savify:
             pass
 
         self.completed += 1
-        self.logger.info(f'Downloaded {self.completed} / {self.queue_size} -> {str(track)}')
+        print(f'Downloaded {self.completed} / {self.queue_size} -> {str(track)}')
         return status
