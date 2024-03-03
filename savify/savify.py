@@ -48,7 +48,7 @@ class Savify:
     def __init__(self, api_credentials=None, quality=Quality.BEST, download_format=Format.MP3,
                  group=None, path_holder: PathHolder = None, retry: int = 3,
                  ydl_options: dict = None, skip_cover_art: bool = False, logger: Logger = None,
-                 ffmpeg_location: str = 'ffmpeg') -> None:
+                 ffmpeg_location: str = 'ffmpeg', interface=None) -> None:
 
         self.download_format = download_format
         self.ffmpeg_location = ffmpeg_location
@@ -59,6 +59,7 @@ class Savify:
         self.completed = 0
         self.retry = retry
         self.group = group
+        self.gui_interface = interface
 
         # Config or defaults...
         self.ydl_options = ydl_options or dict()
@@ -77,10 +78,6 @@ class Savify:
             raise FFmpegNotInstalledError
 
         clean(self.path_holder.get_temp_dir())
-        self.check_for_updates()
-
-    def check_for_updates(self) -> None:
-        pass
 
     def _parse_query(self, query, query_type=Type.TRACK, artist_albums: bool = False) -> list:
         result = list()
@@ -113,10 +110,11 @@ class Savify:
             raise InternetConnectionError
 
         if not (len(queue) > 0):
-            print('Nothing found using the given query.')
+            self.gui_interface.print('Nothing found using the given query.')
             return
 
-        print(f'Downloading {len(queue)} songs...')
+        self.gui_interface.set_total(len(queue))
+        self.gui_interface.print(f'Downloading {len(queue)} songs...')
         start_time = time.time()
         freeze_support()
         with ThreadPool(cpu_count()) as pool:
@@ -152,11 +150,11 @@ class Savify:
                 from os.path import relpath
                 m3u += f'{relpath(location, m3u_location.parent)}\n'
 
-            print('Creating the M3U playlist file..')
+            self.gui_interface.print('Creating the M3U playlist file..')
             with open(m3u_location, 'w') as m3u_file:
                 m3u_file.write(m3u)
 
-        print('Cleaning up...')
+        self.gui_interface.print('Cleaning up...')
         clean(self.path_holder.get_temp_dir())
 
         message = f'Download Finished!\n\tCompleted {len(queue) - len(failed_jobs)}/{len(queue)}' \
@@ -168,7 +166,7 @@ class Savify:
                 message += f'\n\tSong:\t{str(failed_job["track"])}' \
                            f'\n\tReason:\t{failed_job["error"]}\n'
 
-        print(message)
+        self.gui_interface.print(message)
         self.queue_size -= len(queue)
         self.completed -= len(queue)
 
@@ -191,9 +189,10 @@ class Savify:
         }
 
         if check_file(output):
-            print(f'{str(track)} -> is already downloaded. Skipping...')
+            self.gui_interface.print(f'{str(track)} -> is already downloaded. Skipping...')
             status['returncode'] = 0
             self.completed += 1
+            self.gui_interface.increment()
             return status
 
         create_dir(output.parent)
@@ -268,7 +267,8 @@ class Savify:
 
             status['returncode'] = 0
             self.completed += 1
-            print(f'Downloaded {self.completed} / {self.queue_size} -> {str(track)}')
+            self.gui_interface.print(f'Downloaded {self.completed} / {self.queue_size} -> {str(track)}')
+            self.gui_interface.increment()
             return status
 
         attempt = 0
@@ -321,5 +321,6 @@ class Savify:
             pass
 
         self.completed += 1
-        print(f'Downloaded {self.completed} / {self.queue_size} -> {str(track)}')
+        self.gui_interface.print(f'Downloaded {self.completed} / {self.queue_size} -> {str(track)}')
+        self.gui_interface.increment()
         return status
