@@ -12,7 +12,7 @@ from .utils import PathHolder, create_dir
 from .savify import Savify
 from .logger import Logger
 from .exceptions import FFmpegNotInstalledError, SpotifyApiCredentialsNotSetError, UrlNotSupportedError, \
-    InternetConnectionError
+    InternetConnectionError, SavifyError
 
 BANNER = rf"""
 
@@ -248,6 +248,9 @@ def main(ctx, type, quality, format, output, group, path, m3u, artist_albums, ve
         logger.error(ex.message)
         check_guided()
         return 1
+
+    except Exception as ex:
+        raise SavifyError(f"Caught an unexpected error:\n{ex}")
 
     check_guided()
     return 0

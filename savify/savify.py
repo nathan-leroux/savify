@@ -21,7 +21,7 @@ from .spotify import Spotify
 from .track import Track
 from .logger import Logger
 from .exceptions import FFmpegNotInstalledError, SpotifyApiCredentialsNotSetError, UrlNotSupportedError, \
-    YoutubeDlExtractionError, InternetConnectionError
+    YoutubeDlExtractionError, InternetConnectionError, SavifyError
 
 
 def _sort_dir(track: Track, group: str) -> str:
@@ -108,6 +108,8 @@ class Savify:
             self.queue_size += len(queue)
         except requests.exceptions.ConnectionError or URLError:
             raise InternetConnectionError
+        except Exception as error:
+            raise SavifyError(message=f"Ran into an unknown error...\n{error}")
 
         if not (len(queue) > 0):
             self.gui_interface.print('Nothing found using the given query.')
