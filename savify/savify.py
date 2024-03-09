@@ -109,7 +109,7 @@ class Savify:
         except requests.exceptions.ConnectionError or URLError:
             raise InternetConnectionError
         except Exception as error:
-            raise SavifyError(message=f"Ran into an unknown error...\n{error}")
+            raise SavifyError(message=f"Ran into an error\n{error}")
 
         if not (len(queue) > 0):
             self.gui_interface.print('Nothing found using the given query.')
